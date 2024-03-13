@@ -1,4 +1,4 @@
-trigger ContactTrigger on Contact (before insert) {
+trigger ContactTrigger on Contact (after insert, after update, after delete, after undelete) {
 
-    TriggerDispatcher.run(ContactTriggerHandler.getInstance(), Trigger.operationType, AssetTriggerHandler.class.getName());
+    TriggerDispatcher.run(ContactTriggerHandler.getInstance(), Trigger.operationType, ContactTriggerHandler.class.getName());
 }
