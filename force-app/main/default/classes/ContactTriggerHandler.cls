@@ -26,10 +26,11 @@ public with sharing class ContactTriggerHandler implements TriggerInterface{
     public static void beforeDelete(List<SObject> oldRecordsList , Map<Id, SObject> oldRecordsMap){}
 
     public static void afterUpdate(Map<Id, SObject> newRecordsMap,  Map<Id, SObject> oldRecordsMap){
+        List<Account> accountListToUpdate = new List<Account>();
 
         Map<Id, Decimal> accountsMapSubtr = new Map<Id, Decimal>();
         Map<Id, Decimal> accountsMapAdd = new Map<Id, Decimal>();
-        List<Account> accountListToUpdate = new List<Account>();
+
         Map<Id, Contact> newContactsMap = (Map<Id, Contact>)newRecordsMap;
         Map<Id, Contact> oldContactsMap = (Map<Id, Contact>)oldRecordsMap;
 
@@ -42,15 +43,27 @@ public with sharing class ContactTriggerHandler implements TriggerInterface{
                     Boolean ifAmountUpdated = (newContactsMap.get(contact.Id).Amount__c != oldContactsMap.get(contact.Id).Amount__c);
                     Boolean ifAccountUpdated = (contact.AccountId != oldContactsMap.get(contact.Id).AccountId);
 
-                    if (ifAccountUpdated && !ifAmountUpdated) {
-                        accountsMapSubtr.put(oldContactsMap.get(contact.Id).AccountId, contact.Amount__c);
-                        accountsMapAdd.put(contact.AccountId, contact.Amount__c);
+                    if ((ifAccountUpdated && !ifAmountUpdated) || (ifAccountUpdated && ifAmountUpdated)) {
+                        if (accountsMapAdd.containsKey(contact.AccountId)) {
+                            Decimal oldValue = accountsMapAdd.get(contact.AccountId);
+                            accountsMapAdd.put(contact.AccountId, oldValue + contact.Amount__c);
+                        } else {
+                            accountsMapAdd.put(contact.AccountId, contact.Amount__c);
+                        }
+                        if (accountsMapSubtr.containsKey(oldContactsMap.get(contact.Id).AccountId)) {
+                            Decimal oldValue = accountsMapSubtr.get(oldContactsMap.get(contact.Id).AccountId);
+                            accountsMapSubtr.put(oldContactsMap.get(contact.Id).AccountId, oldValue + contact.Amount__c);
+                        } else {
+                            accountsMapSubtr.put(oldContactsMap.get(contact.Id).AccountId, contact.Amount__c);
+                        }
                     } else if (ifAmountUpdated && !ifAccountUpdated) {
                         Decimal newAmount = newContactsMap.get(contact.Id).Amount__c - oldContactsMap.get(contact.Id).Amount__c;
-                        accountsMapAdd.put(contact.AccountId, newAmount);
-                    } else if (ifAccountUpdated && ifAmountUpdated) {
-                        accountsMapSubtr.put(oldContactsMap.get(contact.Id).AccountId, oldContactsMap.get(contact.Id).Amount__c);
-                        accountsMapAdd.put(contact.AccountId, contact.Amount__c);
+                        if (accountsMapAdd.containsKey(contact.AccountId)) {
+                            Decimal oldValue = accountsMapAdd.get(contact.AccountId);
+                            accountsMapAdd.put(contact.AccountId, oldValue + newAmount);
+                        } else {
+                            accountsMapAdd.put(contact.AccountId, newAmount);
+                        }
                     }
                 }
             }
@@ -69,19 +82,18 @@ public with sharing class ContactTriggerHandler implements TriggerInterface{
 
     private static Map<Id, Decimal> getAccountsWithAmountMap(List<Contact> contactsList) {
 
-        Map<Id, Decimal> accountIdToIntMap = new Map<Id, Decimal>();
+        Map<Id, Decimal> accountIdToTotalAmountMap = new Map<Id, Decimal>();
 
-        if (!contactsList.isEmpty()) {
-
-            for (Contact contact : (List<Contact>)contactsList) {
-
-                if (contact.AccountId != null) {
-
-                    accountIdToIntMap.put(contact.AccountId, contact.Amount__c);
+        for (Contact contact : contactsList) {
+            if (contact.AccountId != null) {
+                if (accountIdToTotalAmountMap.containsKey(contact.AccountId)) {
+                    accountIdToTotalAmountMap.put(contact.AccountId, accountIdToTotalAmountMap.get(contact.AccountId) + contact.Amount__c);
+                } else {
+                    accountIdToTotalAmountMap.put(contact.AccountId, contact.Amount__c);
                 }
             }
         }
-        return accountIdToIntMap;
+        return accountIdToTotalAmountMap;
     }
 
     private static void updateAccountSummarySubtraction(Map<Id, Decimal> accountIdToIntMap) {
@@ -92,6 +104,7 @@ public with sharing class ContactTriggerHandler implements TriggerInterface{
 
             for (Account account : [SELECT Id, Summary__c FROM Account WHERE Id IN : accountIdToIntMap.keySet()]) {
                 account.Summary__c -= accountIdToIntMap.get(account.Id);
+                account.Summary__c = (account.Summary__c < 0) ? 0 : account.Summary__c;
                 accountListToUpdate.add(account);
             }
 
