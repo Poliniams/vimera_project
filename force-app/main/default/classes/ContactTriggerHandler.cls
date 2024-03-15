@@ -1,4 +1,4 @@
-public with sharing class ContactTriggerHandler implements TriggerInterface{
+public without sharing class ContactTriggerHandler implements TriggerInterface{
 
     private static ContactTriggerHandler instance;
 
@@ -26,8 +26,6 @@ public with sharing class ContactTriggerHandler implements TriggerInterface{
     public static void beforeDelete(List<SObject> oldRecordsList , Map<Id, SObject> oldRecordsMap){}
 
     public static void afterUpdate(Map<Id, SObject> newRecordsMap,  Map<Id, SObject> oldRecordsMap){
-        List<Account> accountListToUpdate = new List<Account>();
-
         Map<Id, Decimal> accountsMapSubtr = new Map<Id, Decimal>();
         Map<Id, Decimal> accountsMapAdd = new Map<Id, Decimal>();
 
@@ -80,6 +78,7 @@ public with sharing class ContactTriggerHandler implements TriggerInterface{
         updateAccountSummaryAddition(accountIdToIntMap);
     }
 
+    @TestVisible
     private static Map<Id, Decimal> getAccountsWithAmountMap(List<Contact> contactsList) {
 
         Map<Id, Decimal> accountIdToTotalAmountMap = new Map<Id, Decimal>();
@@ -96,6 +95,7 @@ public with sharing class ContactTriggerHandler implements TriggerInterface{
         return accountIdToTotalAmountMap;
     }
 
+    @TestVisible
     private static void updateAccountSummarySubtraction(Map<Id, Decimal> accountIdToIntMap) {
 
         List<Account> accountListToUpdate = new List<Account>();
@@ -114,6 +114,7 @@ public with sharing class ContactTriggerHandler implements TriggerInterface{
         }
     }
 
+    @TestVisible
     private static void updateAccountSummaryAddition(Map<Id, Decimal> accountIdToIntMap) {
 
         List<Account> accountListToUpdate = new List<Account>();

@@ -30,22 +30,17 @@ private class ContactUndeleteTriggerTest {
     @isTest
     private static void testContactUndelete() {
 
-        deleteContacts();
+        List<Contact> contactDelList = [SELECT Id, LastName FROM Contact WHERE Amount__c = 10];
+        delete contactDelList;
 
-        List<Contact> contactList = [SELECT Id, LastName FROM Contact WHERE Amount__c = 10 ALL ROWS];
+        List<Contact> contactUndelList = [SELECT Id, LastName FROM Contact WHERE Amount__c = 10 ALL ROWS];
 
         Test.startTest();
-        undelete contactList;
+        undelete contactUndelList;
         Test.stopTest();
 
         List<Account> accNullSumList = [SELECT Id, Name, Summary__c FROM Account WHERE Name = 'Acme'  LIMIT 1];
 
         System.assertEquals(100, accNullSumList[0].Summary__c, 'Account summary is wrong');
-    }
-
-    private static void deleteContacts() {
-
-        List<Contact> contactList = [SELECT Id, LastName FROM Contact WHERE Amount__c = 10];
-        delete contactList;
     }
 }
